@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+*.log
+
+# Veri seti GitHub'a yüklenmez — Kaggle'dan indirilir (README)
+er_dataset.csv
+public/er_dataset.csv
