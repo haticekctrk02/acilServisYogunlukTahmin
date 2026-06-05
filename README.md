@@ -1,74 +1,14 @@
-# Acil Servis Yoğunluk Tahmin Sistemi
+# Acil Servis Personel Artırımı — Bulanık Mantık Kontrolcü
 
-**Yapay Zeka Destekli Acil Servis Kapasite Tahmini**
+**Bulanık Mantık Dersi Dönem Projesi**
 
-Hastaneler ve acil servis yöneticileri için kurumsal düzeyde sağlık analitiği paneli. Acil servis yoğunluğunu tahmin eder, anlık ve geçmiş metrikleri görselleştirir, yönetici raporları sunar.
-
----
-
-## İçindekiler
-
-- [Özellikler](#özellikler)
-- [Veri seti](#veri-seti)
-- [Teknoloji yığını](#teknoloji-yığını)
-- [Kurulum](#kurulum)
-- [Komutlar](#komutlar)
-- [Proje yapısı](#proje-yapısı)
-- [Tasarım sistemi](#tasarım-sistemi)
-- [Dil desteği](#dil-desteği)
-- [Sınırlamalar](#sınırlamalar)
-
----
-
-## Özellikler
-
-### Kontrol paneli
-- 6 KPI kartı (doluluk, tahmin, bekleme süresi, risk, yatak, personel)
-- Sparkline grafikleri ve trend göstergeleri
-- AI tahmin merkezi ve risk yönetimi paneli
-
-### Tahmin
-- Hastane, gün, mevsim, saat, aciliyet, bölge, personel girdileri
-- Sıcaklık, hava durumu, tatil ve önceki saat hasta sayısı
-- Yoğunluk seviyeleri: **DÜŞÜK / ORTA / YÜKSEK / KRİTİK**
-- Bekleme süresi ve personel önerisi
-
-### Canlı izleme
-- Güncel hasta, yatak, doktor, hemşire metrikleri
-- Ambulans varışları ve kuyruk
-- Ortalama hasta memnuniyeti
-
-### Analitik
-- Saatlik hasta trendi
-- Haftalık ısı haritası
-- Aylık ziyaret ve mevsimsel kullanım
-- Bekleme süresi dağılımı
-- Hasta sonuçları (taburcu / yatış)
-- Triyaj aşama süreleri (kayıt → triyaj → müdahale)
-
-### Geçmiş veriler
-- Arama, filtre, sıralama, sayfalama
-- ML tahmin vs gerçek hasta sayısı karşılaştırması
-
-### Raporlar
-- PDF ve Excel dışa aktarma
-- Haftalık / aylık rapor şablonları
-
-### ML analizleri
-- Model doğruluğu, precision, recall, RMSE, MAE
-- Özellik önemi grafiği (veriden hesaplanır)
-
-### Diğer
-- Türkçe / İngilizce arayüz (Ayarlar’dan seçilir)
-- Koyu mod
-- Üst çubukta arama, bildirimler, hastane seçici, profil
-- Tam responsive tasarım
+Gerçek dünya problemi olarak acil servis personel planlaması modellenmiştir. Proje, Kaggle **ER Wait Time** veri setindeki acil servis ziyaret kayıtlarından esinlenir; giriş değişkenleri (hasta yoğunluğu, aciliyet, hemşire oranı, bekleme süresi) bulanıklaştırılır; **18 IF-THEN kuralı** ile Mamdani çıkarım yapılır; çıkış **centroid (ağırlık merkezi)** ile durulaştırılır.
 
 ---
 
 ## Veri seti
 
-**Veri seti bu depoda (GitHub) bulunmaz.** Kaggle üzerinden indirmeniz gerekir.
+**`er_dataset.csv` dosyası GitHub deposunda bulunmaz.** Kaggle üzerinden indirmeniz gerekir.
 
 ### İndirme linki
 
@@ -83,21 +23,24 @@ acilServisYogunlukTahmin/
 └── er_dataset.csv    ← buraya koyun
 ```
 
-4. Ardından `npm run dev` veya `npm run sync-dataset` komutu dosyayı `public/` klasörüne kopyalar.
-
-```bash
-npm run sync-dataset
-```
-
 | Özellik | Açıklama |
 |---------|----------|
 | Kaynak | [Kaggle — ER Wait Time](https://www.kaggle.com/datasets/rivalytics/er-wait-time) |
-| Yerel dosya adı | `er_dataset.csv` (proje kökü) |
-| Uygulama yolu | `public/er_dataset.csv` (otomatik kopyalanır) |
 | Kayıt sayısı | ~5.000 acil servis ziyareti |
 | Kolon sayısı | 19 |
 
-### CSV kolonları (özet)
+### Veri seti → bulanık kontrolcü eşlemesi
+
+| CSV kolonu | Bulanık giriş | Açıklama |
+|------------|---------------|----------|
+| `Urgency Level` | Aciliyet skoru | Low / Medium / High / Critical → 0–10 skala |
+| `Nurse-to-Patient Ratio` | Hemşire/hasta oranı | Oran ters çevrilerek 0–1 normalize edilir |
+| `Total Wait Time (min)` | Bekleme süresi | 0–180 dk aralığına ölçeklenir |
+| Ziyaret yoğunluğu | Hasta yoğunluğu | Saatlik/hastane bazlı doluluk % olarak türetilir |
+
+Bu eşleme, gerçek acil servis verisinin bulanık kontrolcü girdilerine bağlanmasını sağlar. Arayüzdeki slider değerleri aynı aralıklarda manuel veya veri setinden türetilmiş örneklerle test edilebilir.
+
+### Örnek CSV kolonları
 
 - Visit ID, Patient ID, Hospital ID, Hospital Name, Region  
 - Visit Date, Day of Week, Season, Time of Day, Urgency Level  
@@ -107,140 +50,94 @@ npm run sync-dataset
 
 ---
 
-## Teknoloji yığını
+## Özellikler
 
-| Katman | Teknoloji |
-|--------|-----------|
-| Arayüz | React 18, TypeScript |
-| Derleme | Vite 5 |
-| Stil | Tailwind CSS |
-| Grafikler | Recharts |
-| İkonlar | Lucide React |
-| Yönlendirme | React Router 6 |
-| Dışa aktarma | jsPDF, xlsx |
-| Test | Vitest |
+- 4 giriş, 1 çıkış — her değişkende en az 3 dilsel terim
+- 18 kural (≥15 şartı karşılanır)
+- Centroid durulaştırma
+- **Streamlit** arayüz: slider, Hesapla, üyelik grafikleri, aktif kurallar
+- Senaryo testleri (`tests_scenarios.py`)
+- Gerçek dünya verisi: Kaggle ER Wait Time (`er_dataset.csv`)
 
 ---
 
 ## Kurulum
 
-### Gereksinimler
-
-- Node.js 18+  
-- npm  
-
-### Adımlar
+**Gereksinimler:** Python 3.10+
 
 ```bash
-# 1. Depoyu klonlayın
-git clone <repo-url>
+git clone https://github.com/haticekctrk02/acilServisYogunlukTahmin.git
 cd acilServisYogunlukTahmin
 
-# 2. Veri setini Kaggle'dan indirip er_dataset.csv olarak proje köküne koyun
-#    https://www.kaggle.com/datasets/rivalytics/er-wait-time?resource=download
+# Veri setini Kaggle'dan indirip er_dataset.csv olarak proje köküne koyun
+# https://www.kaggle.com/datasets/rivalytics/er-wait-time?resource=download
 
-# 3. Bağımlılıkları yükleyin
-npm install
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+# source venv/bin/activate
 
-# 4. Veri setini public/ klasörüne kopyalayın (npm run dev bunu da yapar)
-npm run sync-dataset
-
-# 5. Geliştirme sunucusu
-npm run dev
+pip install -r requirements.txt
 ```
 
-Tarayıcıda açın: **http://localhost:5173**
-
-> `er_dataset.csv` yoksa uygulama açılmaz veya veri yükleme hatası görürsünüz. Önce Kaggle indirmesini tamamlayın.
+> `er_dataset.csv` yoksa arayüz yine çalışır; slider ile manuel test yapılır. Veri seti senaryo analizi ve rapor bölümü için gereklidir.
 
 ---
 
-## Komutlar
+## Çalıştırma
 
-| Komut | Açıklama |
-|-------|----------|
-| `npm run dev` | Geliştirme sunucusu |
-| `npm run build` | Üretim derlemesi |
-| `npm run preview` | Derlenmiş sürümü önizle |
-| `npm run test` | Birim testleri |
-| `npm run sync-dataset` | `er_dataset.csv` → `public/` kopyala |
+### Arayüz (Streamlit)
+
+```bash
+streamlit run app.py
+```
+
+Tarayıcıda **http://localhost:8501** açılır.
+
+### Senaryo testleri
+
+```bash
+python tests_scenarios.py
+```
+
+Çıktı: `test_sonuclari.csv`, `test_sonuclari.png`
 
 ---
 
 ## Proje yapısı
 
 ```
-acilServisYogunlukTahmin/
-├── er_dataset.csv          # Sizin indirdiğiniz dosya (GitHub'da YOK — Kaggle)
-├── public/
-│   └── er_dataset.csv      # npm run sync-dataset ile oluşur
-├── src/
-│   ├── components/         # UI, layout, grafik, tahmin, risk
-│   ├── pages/              # Sayfalar (Dashboard, Tahmin, Canlı, …)
-│   ├── services/           # CSV, ML model, arama, export
-│   ├── context/            # Veri seti ve dil sağlayıcıları
-│   ├── hooks/              # Tema, saat, ayarlar, canlı veri
-│   ├── i18n/               # Türkçe / İngilizce çeviriler
-│   ├── types/              # TypeScript tipleri
-│   └── utils/              # CSV ayrıştırıcı
-├── package.json
+├── er_dataset.csv         # Sizin indirdiğiniz dosya (GitHub'da YOK — Kaggle)
+├── app.py                 # Streamlit arayüz
+├── fuzzy_controller.py    # Bulanık kontrolcü (MF, çıkarım, durulaştırma)
+├── rules.py               # 18 IF-THEN kuralı
+├── tests_scenarios.py     # Test senaryoları
+├── requirements.txt
+├── RAPOR.md               # Dönem projesi raporu
 └── README.md
 ```
 
-### Sayfalar
+---
 
-| Rota | Sayfa |
-|------|--------|
-| `/` | Kontrol Paneli |
-| `/predictions` | Tahminler |
-| `/live` | Canlı İzleme |
-| `/analytics` | Analitik |
-| `/historical` | Geçmiş Veriler |
-| `/reports` | Raporlar |
-| `/ml-insights` | ML Analizleri |
-| `/settings` | Ayarlar |
-| `/profile` | Profil |
+## Giriş / Çıkış
+
+| Değişken | Aralık | Terimler | Veri seti kaynağı |
+|----------|--------|----------|-------------------|
+| Hasta yoğunluğu | 0–100 % | Düşük, Orta, Yüksek | Ziyaret yoğunluğu |
+| Aciliyet | 0–10 | Düşük, Orta, Kritik | `Urgency Level` |
+| Hemşire/hasta oranı | 0–1 | Yetersiz, Yeterli, İyi | `Nurse-to-Patient Ratio` |
+| Bekleme süresi | 0–180 dk | Kısa, Orta, Uzun | `Total Wait Time (min)` |
+| **Çıkış:** Personel artırımı | 0–100 % | Centroid | — |
 
 ---
 
-## Tasarım sistemi
+## Rapor
 
-| Token | Renk | Kullanım |
-|-------|------|----------|
-| Primary | `#2563EB` | Ana marka, butonlar |
-| Secondary | `#0EA5E9` | İkincil vurgu |
-| Success | `#22C55E` | Düşük risk, başarı |
-| Warning | `#F59E0B` | Orta risk, uyarı |
-| Critical | `#EF4444` | Kritik risk, alarm |
-| Arka plan | `#F8FAFC` | Açık tema zemin |
-| Koyu zemin | `#0F172A` | Koyu tema |
-| Kart (koyu) | `#1E293B` | Koyu mod kartlar |
-
----
-
-## Dil desteği
-
-- Varsayılan dil: **Türkçe**
-- **Ayarlar → Bölgesel** menüsünden İngilizce seçilebilir
-- Tercih `localStorage` içinde saklanır
-- Sayfa başlığı ve meta açıklama dile göre güncellenir
-
----
-
-## Sınırlamalar
-
-Bu sürüm **ön yüz (frontend) prototipi** olarak tasarlanmıştır:
-
-- **CSV dosyası repoda yoktur;** [Kaggle](https://www.kaggle.com/datasets/rivalytics/er-wait-time?resource=download) üzerinden indirilmelidir.
-- Veriler statik CSV dosyasından okunur; canlı HBYS/API bağlantısı yoktur.
-- Makine öğrenimi tarayıcıda basit bir lineer model ile çalışır; Python üretim modeli yoktur.
-- Sıcaklık ve hava durumu gibi alanlar veri setinde olmadığı için mevsim/saat kurallarıyla türetilir.
-- Canlı izleme metrikleri simüle edilir (periyodik yenileme).
-
-Üretim ortamı için backend API, kimlik doğrulama ve gerçek zamanlı veri akışı eklenmesi önerilir.
+Akademik rapor: **[RAPOR.md](RAPOR.md)** — problem tanımı, tasarım, test, değerlendirme, kaynakça.
 
 ---
 
 ## Lisans
 
-Bu proje eğitim ve demonstrasyon amaçlıdır.
+Eğitim amaçlı dönem projesi.

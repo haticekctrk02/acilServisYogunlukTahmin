@@ -1,10 +1,21 @@
-node_modules
-dist
-dist-ssr
-*.local
-.DS_Store
-*.log
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
 
 # Veri seti GitHub'a yüklenmez — Kaggle'dan indirilir (README)
 er_dataset.csv
-public/er_dataset.csv
+
+# Test çıktıları
+test_sonuclari.csv
+test_sonuclari.png
+
+# IDE / OS
+.DS_Store
+*.log
+.idea/
+.vscode/
